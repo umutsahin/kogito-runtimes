@@ -11,7 +11,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.kie.kogito</groupId>
   <artifactId>kogito-runtimes</artifactId>
-  <version>999-SNAPSHOT</version>
+  <version>333-20240502-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Kogito Runtimes</name>
@@ -74,14 +74,17 @@
   <!-- distributionManagement section -->
   <distributionManagement>
     <repository>
-      <id>apache-release-staging-repository</id>
-      <name>Apache Release Staging Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+      <id>github</id>
+      <name>Github</name>
+      <url>https://maven.pkg.github.com/umutsahin/kogito-runtimes</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
     </repository>
     <snapshotRepository>
-      <id>apache-snapshots-repository</id>
-      <name>Apache Snapshot Repository</name>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
+      <id>github</id>
+      <name>Github</name>
+      <url>https://maven.pkg.github.com/umutsahin/kogito-runtimes</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -100,6 +103,14 @@
       <snapshots>
         <enabled>true</enabled>
         <updatePolicy>daily</updatePolicy>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>github</id>
+      <name>Drools</name>
+      <url>https://maven.pkg.github.com/umutsahin/drools-parent</url>
+      <snapshots>
+        <enabled>true</enabled>
       </snapshots>
     </repository>
   </repositories>
@@ -126,6 +137,14 @@
       <releases>
         <enabled>true</enabled>
       </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>github</id>
+      <name>Drools</name>
+      <url>https://maven.pkg.github.com/umutsahin/drools-parent</url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>

@@ -1,0 +1,20 @@
+name: Kogito build
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Maven Central Repository
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Publish package
+        run: ./mvnw deploy -Dquickly
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}

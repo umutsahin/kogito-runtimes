@@ -6,7 +6,7 @@
     <parent>
         <artifactId>jbpm</artifactId>
         <groupId>org.kie.kogito</groupId>
-        <version>999-SNAPSHOT</version>
+        <version>333-20240502-SNAPSHOT</version>
     </parent>
 
     <artifactId>jbpm-tests</artifactId>
