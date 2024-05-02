@@ -21,6 +21,8 @@ package org.jbpm.process.instance.impl.util;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
@@ -35,6 +37,7 @@ public class TypeTransformer {
 
     private ObjectMapper mapper;
     private ClassLoader classLoader;
+    private static final Map<String, ParseResult<Type>> PARSE_RESULT_MAP = new ConcurrentHashMap<>();
 
     public TypeTransformer() {
         this(TypeTransformer.class.getClassLoader());
@@ -50,8 +53,10 @@ public class TypeTransformer {
     }
 
     private Object transform(Object toMarshal, Class<?> targetClazz, ClassLoader currentClassLoader, String className) throws ClassNotFoundException, IOException {
-        JavaParser parser = new JavaParser();
-        ParseResult<Type> unit = parser.parseType(className);
+        ParseResult<Type> unit = PARSE_RESULT_MAP.computeIfAbsent(className, clazz -> {
+            JavaParser parser = new JavaParser();
+            return parser.parseType(className);
+        });
         if (!unit.isSuccessful()) {
             return toMarshal;
         }

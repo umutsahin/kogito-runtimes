@@ -20,14 +20,20 @@ package org.jbpm.compiler.canonical.descriptors;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.jbpm.compiler.canonical.NodeValidator;
+import org.jbpm.process.instance.impl.workitem.Complete;
+import org.jbpm.util.NoStackUnsupportedOperationException;
 import org.jbpm.workflow.core.impl.DataAssociation;
 import org.jbpm.workflow.core.node.WorkItemNode;
 import org.kie.kogito.internal.process.runtime.KogitoWorkItem;
 import org.kie.kogito.internal.process.runtime.KogitoWorkItemHandler;
 import org.kie.kogito.internal.process.runtime.KogitoWorkItemManager;
+import org.kie.kogito.process.workitem.Transition;
 import org.kie.kogito.process.workitem.WorkItemExecutionException;
+import org.kie.kogito.process.workitems.InternalKogitoWorkItem;
+import org.kie.kogito.process.workitems.InternalKogitoWorkItemManager;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.Modifier;
@@ -38,8 +44,11 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AssignExpr;
+import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.InstanceOfExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -50,6 +59,7 @@ import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
+import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.ThrowStmt;
@@ -214,10 +224,60 @@ public abstract class AbstractServiceTaskDescriptor implements TaskDescriptor {
                 .setType(String.class)
                 .setName("getName")
                 .setBody(new BlockStmt().addStatement(new ReturnStmt(new StringLiteralExpr(getName()))));
-        cls.addMember(executeWorkItem)
-                .addMember(abortWorkItem)
-                .addMember(getName);
 
+        // transitionToPhase method
+        BlockStmt transitionToPhaseBody = new BlockStmt();
+
+        NameExpr workItem = new NameExpr("workItem");
+        NameExpr manager = new NameExpr("manager");
+        NameExpr wi = new NameExpr("wi");
+        NameExpr wim = new NameExpr("wim");
+
+        ClassOrInterfaceType stringType = new ClassOrInterfaceType(null, String.class.getCanonicalName());
+        ClassOrInterfaceType objectType = new ClassOrInterfaceType(null, Object.class.getCanonicalName());
+        ClassOrInterfaceType exceptionType = new ClassOrInterfaceType(null, NoStackUnsupportedOperationException.class.getCanonicalName());
+        ClassOrInterfaceType mapOfStringObjectType = new ClassOrInterfaceType(null,
+                new SimpleName(Map.class.getCanonicalName()),
+                new NodeList<>(stringType, objectType));
+        ClassOrInterfaceType wiType = new ClassOrInterfaceType(null, InternalKogitoWorkItem.class.getCanonicalName());
+        ClassOrInterfaceType wimType = new ClassOrInterfaceType(null,
+                InternalKogitoWorkItemManager.class.getCanonicalName());
+        BlockStmt ifThen = new BlockStmt();
+        VariableDeclarationExpr wiField = new VariableDeclarationExpr().addVariable(new VariableDeclarator(wiType,
+                wi.getName()));
+        VariableDeclarationExpr wimField = new VariableDeclarationExpr().addVariable(new VariableDeclarator(wimType,
+                wim.getName()));
+        ifThen.addStatement(wiField)
+                .addStatement(new AssignExpr(wi, new CastExpr(wiType, workItem), AssignExpr.Operator.ASSIGN))
+                .addStatement(new MethodCallExpr(wi, "setResults").addArgument(new CastExpr(mapOfStringObjectType,
+                        new MethodCallExpr(new NameExpr(
+                                "transition"),
+                                "data"))))
+                .addStatement(new MethodCallExpr(wi,
+                        "setPhaseId").addArgument(
+                                new FieldAccessExpr(new NameExpr(Complete.class.getCanonicalName()),
+                                        "ID")))
+                .addStatement(new MethodCallExpr(wi, "setPhaseStatus").addArgument(new FieldAccessExpr(new NameExpr(
+                        Complete.class.getCanonicalName()), "STATUS")))
+                .addStatement(wimField)
+                .addStatement(new AssignExpr(wim, new CastExpr(wimType, manager), AssignExpr.Operator.ASSIGN))
+                .addStatement(new MethodCallExpr(wim, "internalCompleteWorkItem").addArgument(wi));
+        BlockStmt ifElse = new BlockStmt();
+        ifElse.addStatement(new ThrowStmt(new ObjectCreationExpr(null, exceptionType, new NodeList<>())));
+
+        transitionToPhaseBody.addStatement(new IfStmt(new BinaryExpr(new InstanceOfExpr(workItem, wiType), new InstanceOfExpr(manager, wimType),
+                BinaryExpr.Operator.AND), ifThen, ifElse));
+        MethodDeclaration transitionToPhase = new MethodDeclaration().setModifiers(Modifier.Keyword.PUBLIC)
+                .setType(void.class)
+                .setName("transitionToPhase")
+                .setBody(transitionToPhaseBody)
+                .addParameter(KogitoWorkItem.class.getCanonicalName(), "workItem")
+                .addParameter(KogitoWorkItemManager.class.getCanonicalName(), "manager")
+                .addParameter(Transition.class.getCanonicalName(), "transition");
+
+        cls.addMember(executeWorkItem)
+                .addMember(abortWorkItem).addMember(transitionToPhase)
+                .addMember(getName);
         return cls;
     }
 }
